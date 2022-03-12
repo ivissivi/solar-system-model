@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Solar System</title>
+		<style>
+			body { margin: 0; }		
+		</style>
+	</head>
+	<body>
+
+		<script src="three.min.js"></script>
+		<script src="OrbitControls.js"></script>
+
+<script>
+
+		const starsTexture = "/8k_stars_milky_way.jpg";
+		const sunTexture = "/8k_sun.jpg";
+		const mercuryTexture = "/8k_mercury.jpg";
+		const venusTexture = "/8k_venus_surface.jpg";
+		const earthTexture = "/8k_earth_daymap.jpg";
+		const moonTexture = "/8k_moon.jpg";
+		const marsTexture = "/8k_mars.jpg";
+		const jupiterTexture = "/8k_jupiter.jpg";
+		const saturnTexture = "/8k_saturn.jpg";
+		const saturnRingTexture = "/8k_saturn_ring_alpha.jpg";
+		const uranusTexture = "/2k_uranus.jpg";
+		const neptuneTexture = "/2k_neptune.jpg";
+		const plutoTexture = "/8k_pluto.jpg";
+
+		const earthDiameter = 1.5;
+		const earthDistanceFromSun = 31;
+		const earthOrbitalPeriod = 0.01;
+		const earthRotationPeriod = 0.1;
+
+		const renderer = new THREE.WebGLRenderer();
+
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.shadowMap.enabled = true;
+
+		document.body.appendChild(renderer.domElement);
+		document.body.style.overflow = 'hidden';
+
+		const scene = new THREE.Scene();
+
+		var starGeometry = new THREE.SphereGeometry(500, 500, 500);
+		var starMaterial = new THREE.MeshPhongMaterial({
+  			map: new THREE.ImageUtils.loadTexture(starsTexture),
+  			side: THREE.DoubleSide,
+  			shininess: 0
+			});
+		var starField = new THREE.Mesh(starGeometry, starMaterial);
+		starField.castShadow = true;
+		starField.receiveShadow = true;
+		scene.add(starField);
+
+		const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+		const orbit = new THREE.OrbitControls(camera, renderer.domElement);
+
+		camera.position.set(-58, 13, 59);
+		orbit.update();
+
+		var sunLight = new THREE.PointLight(0xffffff, 1, 0, 1);
+		sunLight.position.set(0, 0, 0);
+		sunLight.visible = true;
+		sunLight.decay = false;
+		sunLight.castShadow = true;
+		sunLight.shadow.bias = 0.0001;
+		sunLight.castShadow = true;
+		sunLight.shadow.mapSize.width = 2048;
+		sunLight.shadow.mapSize.height = 2048;
+		sunLight.darkness = 0.1;
+		sunLight.shadow.camera.near = 1000;
+		sunLight.shadow.camera.far = 3e9;
+		sunLight.rotation.set(0, Math.PI, 0);
+		//scene.add(new THREE.CameraHelper(sunLight.shadow.camera));
+
+		const ambientLight = new THREE.AmbientLight(0x404040);
+		scene.add(ambientLight);
+		scene.add(sunLight);
+
+		const textureLoader = new THREE.TextureLoader();
+
+		const sunGeometry = new THREE.SphereGeometry(8, 32, 32);
+		const sunMaterial = new THREE.MeshStandardMaterial({ 
+			emissive: 0xEEEE99,
+   			emissiveIntensity: 0.8,
+			map: textureLoader.load(sunTexture)
+		});
+		const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+		sun.castShadow = true;
+		scene.add(sun);
+
+		function createPlanet(size, texture, position, moon) {
+		const geo = new THREE.SphereGeometry(size, 32, 32);
+		const mat = new THREE.MeshStandardMaterial({
+			metalness: 0,
+			map: textureLoader.load(texture)
+		});
+		const mesh = new THREE.Mesh(geo, mat);
+		const obj = new THREE.Object3D();
+
+		mesh.receiveShadow = true;
+		mesh.castShadow = true;
+
+		obj.receiveShadow = true;
+		obj.castShadow = true;
+		obj.traverse( function( node ) { if ( node instanceof THREE.Mesh ) { node.castShadow = true; } } );
+
+		obj.add(mesh);
+
+		if (moon) {
+    		const moonGeometry = new THREE.SphereGeometry(earthDiameter / 4, 32, 32);
+    		const moonMaterial = new THREE.MeshStandardMaterial({
+      			map: textureLoader.load(moon.texture),
+      			side: THREE.DoubleSide,
+				metalness: 0
+    		});
+    		const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    		obj.add(moonMesh);
+
+			mesh.position.x = position;
+			moonMesh.position.x = position - 35;
+			scene.add(obj);
+
+			earthPivot = new THREE.Group();
+			sun.add( earthPivot );
+			earthPivot.add( mesh );
+			moonPivot = new THREE.Group();
+			mesh.add( moonPivot );
+			moonPivot.add( moonMesh );
+
+			mesh.traverse(function(child){child.castShadow = true;});
+			obj.traverse(function(child){child.castShadow = true;});
+
+			return { mesh, obj, moonMesh, moonPivot, earthPivot }
+		  } else {
+			scene.add(obj);
+			mesh.position.x = position;
+			return { mesh, obj };
+		  	}  
+		}
+
+		function addRing(planetMesh, texture, position, ring) {
+			const ringGeometry = new THREE.RingGeometry(
+					ring.innerRadius,
+					ring.outerRadius,
+					32
+					);
+				const ringMaterial = new THREE.MeshBasicMaterial({
+				map: textureLoader.load(ring.texture),
+				side: THREE.DoubleSide
+				});
+				const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+				planetMesh.add(ringMesh);
+				ringMesh.position.x = position;
+				ringMesh.rotation.x = -0.5 * Math.PI;
+		}
+
+		const mercury = createPlanet(earthDiameter * 0.383, mercuryTexture, earthDistanceFromSun * 0.387);
+		const venus = createPlanet(earthDiameter * 0.949, venusTexture, earthDistanceFromSun * 0.723);
+		const earth = createPlanet(earthDiameter, earthTexture, earthDistanceFromSun, {
+  			innerRadius: 10,
+  			outerRadius: 20,
+  			texture: moonTexture
+			});
+		const mars = createPlanet(earthDiameter * 0.532, marsTexture, earthDistanceFromSun * 1.52);
+		const jupiter = createPlanet(earthDiameter * 11.21, jupiterTexture, earthDistanceFromSun * 3.2);
+		const saturn = createPlanet(earthDiameter * 9.45, saturnTexture, earthDistanceFromSun * 6.57);
+		addRing(saturn.obj, saturnRingTexture, earthDistanceFromSun * 6.57, {
+  			innerRadius: 20,
+  			outerRadius: 35,
+  			texture: saturnRingTexture});
+		const uranus = createPlanet(earthDiameter * 4.01, uranusTexture, earthDistanceFromSun * 8.73);
+		const neptune = createPlanet(earthDiameter * 3.88, neptuneTexture, earthDistanceFromSun * 10.18);
+		const pluto = createPlanet(earthDiameter * 0.187, plutoTexture, earthDistanceFromSun * 12.48);
+
+		earth.receiveShadow = true;
+		earth.castShadow = true;
+
+		earth.mesh.castShadow = true;
+		earth.mesh.receiveShadow = true;
+
+		earth.obj.castShadow = true;
+		earth.obj.receiveShadow = true;
+
+		earth.moonPivot.receiveShadow = true;
+		earth.moonPivot.castShadow = true;
+		
+		earth.earthPivot.receiveShadow = true;
+		earth.earthPivot.castShadow = true;
+
+		function animate() {
+
+			//Rotation
+			mercury.mesh.rotateY(earthRotationPeriod * 6.2);
+			venus.mesh.rotateY(earthRotationPeriod * -1.49);
+			earth.mesh.rotateY(earthRotationPeriod);
+			mars.mesh.rotateY(earthRotationPeriod * 1.03);
+			earth.moonMesh.rotateY(earthRotationPeriod);
+			jupiter.mesh.rotateY(earthRotationPeriod * 0.415);
+  			saturn.mesh.rotateY(earthRotationPeriod * 0.445);
+  			uranus.mesh.rotateY(earthRotationPeriod * -0.720);
+  			neptune.mesh.rotateY(earthRotationPeriod * 0.673);
+  			pluto.mesh.rotateY(earthRotationPeriod * 6.41);
+
+			//Orbit around the sun
+			mercury.obj.rotateY(earthOrbitalPeriod / 0.241); 
+			venus.obj.rotateY(earthOrbitalPeriod / 0.615); 
+			earth.obj.rotateY(earthOrbitalPeriod); 
+			mars.obj.rotateY(earthOrbitalPeriod / 1.88);
+			jupiter.obj.rotateY(earthOrbitalPeriod / 11.9);
+  			saturn.obj.rotateY(earthOrbitalPeriod / 29.4);
+  			uranus.obj.rotateY(earthOrbitalPeriod / 83.7);
+  			neptune.obj.rotateY(earthOrbitalPeriod / 163.7);
+  			pluto.obj.rotateY(earthOrbitalPeriod / 247.9);
+
+			earth.moonPivot.rotateY(earthOrbitalPeriod / 0.0784 / 8);
+			earth.earthPivot.rotateY(earthOrbitalPeriod);
+			
+			renderer.render(scene, camera);
+		}
+
+		renderer.setAnimationLoop(animate);
+
+		window.addEventListener("resize", function () {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		console.log(scene);
+		});
+		</script>
+	</body>
+</html>
