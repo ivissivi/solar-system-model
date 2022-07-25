@@ -7,4 +7,5 @@
   <img src="preview/picture3.png?raw=true" />
 </p>
 
+### GIF
 ![Solar System](preview/solarsystem.gif)
