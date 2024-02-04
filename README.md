@@ -1,5 +1,4 @@
-# GrafProg_2nd_practical
-## Solar system using Three.js
+# Solar system model using Three.js
 
 <p align="center">
   <img src="preview/picture1.png?raw=true" />
